@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>نظام إدارة الرياضيين</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com "></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans Arabic"', 'sans'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Google Fonts - Noto Sans Arabic -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic :wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Noto Sans Arabic', sans-serif;
+    }
+  </style>
+
+  <!-- React & ReactDOM via CDN -->
+  <script crossorigin src="https://unpkg.com/react @18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom @18/umd/react-dom.development.js"></script>
+  <script crossorigin src="https://unpkg.com/ @babel/standalone/babel.min.js"></script>
+
+</head>
+<body class="bg-gray-100 min-h-screen text-right">
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+
+    const { useState, useEffect } = React;
+
+    function App() {
+      const [user, setUser] = useState(null);
+      const [users, setUsers] = useState({});
+      const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+      const [activeTab, setActiveTab] = useState("dashboard");
+      const [notifications, setNotifications] = useState([]);
+
+      // Mock Data
+      useEffect(() => {
+        const mockData = {
+          athletes: Array.from({ length: 200 }, (_, i) => ({
+            id: `ATH${i + 1}`,
+            name: `رياضي ${i + 1}`,
+            role: "athlete",
+            loginHistory: [],
+            attendance: "حاضر",
+            notes: "",
+            lastLogin: null,
+          })),
+          coaches: Array.from({ length: 20 }, (_, i) => ({
+            id: `COA${i + 1}`,
+            name: `مدرب ${i + 1}`,
+            role: "coach",
+            performanceRating: 0,
+            notes: "",
+            attendance: "حاضر",
+          })),
+          doctors: Array.from({ length: 4 }, (_, i) => ({
+            id: `DOC${i + 1}`,
+            name: `طبيب ${i + 1}`,
+            role: "doctor",
+            evaluations: [],
+          })),
+          financeManager: {
+            id: "FIN1",
+            name: "مراقب مالي",
+            role: "finance",
+            subscriptions: 0,
+            insurance: 0,
+            expenses: [],
+          }),
+          deputyDirector: {
+            id: "DEP1",
+            name: "نائب مدير",
+            role: "deputy",
+            coachAttendance: [],
+            athleteAttendance: [],
+          }),
+          director: {
+            id: "DIR1",
+            name: "مدير",
+            role: "director",
+            allStaff: [],
+          },
+        };
+
+        setUsers(mockData);
+      }, []);
+
+      const handleLogin = (e) => {
+        e.preventDefault();
+        const foundUser = Object.values(users).flat().find((u) => u.id === loginForm.username);
+
+        if (foundUser) {
+          const updatedUser = { ...foundUser, lastLogin: new Date().toLocaleString() };
+          setUser(updatedUser);
+          sendSMS(`تم تسجيل دخولك في ${new Date().toLocaleString()}`);
+        } else {
+          alert("رقم الهوية غير صحيح");
+        }
+      };
+
+      const sendSMS = (message) => {
+        setNotifications(prev => [...prev, { message, time: new Date().toLocaleTimeString() }]);
+      };
+
+      const renderDashboard = () => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h3 className="text-xl font-bold mb-4">الدخول الأخير</h3>
+            <p>{user.lastLogin || "لم يتم تسجيل دخول سابق"}</p>
+          </div>
+
+          {user.role === "coach" && (
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h3 className="text-xl font-bold mb-4">تقييم الأداء</h3>
+              <input
+                type="number"
+                min="0"
+                max="5"
+                value={user.performanceRating}
+                onChange={(e) => {
+                  const updatedCoach = { ...user, performanceRating: parseInt(e.target.value) };
+                  setUsers({
+                    ...users,
+                    coaches: users.coaches.map(c => c.id === user.id ? updatedCoach : c)
+                  });
+                  setUser(updatedCoach);
+                }}
+                className="w-full p-2 border rounded"
+              />
+            </div>
+          )}
+
+          {user.role === "doctor" && (
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h3 className="text-xl font-bold mb-4">التقييمات الصحية</h3>
+              {user.evaluations.length > 0 ? (
+                <ul>
+                  {user.evaluations.map((evalItem, index) => (
+                    <li key={index} className="mb-2">
+                      {evalItem.date}: {evalItem.notes}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>لا توجد تقييمات بعد</p>
+              )}
+            </div>
+          )}
+
+          {(user.role === "finance" || user.role === "director") && (
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h3 className="text-xl font-bold mb-4">المصاريف الشهرية</h3>
+              <p>الاشتراكات: {users.financeManager.subscriptions} ريال</p>
+              <p>التأمين: {users.financeManager.insurance} ريال</p>
+            </div>
+          )}
+
+          {user.role === "deputy" && (
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h3 className="text-xl font-bold mb-4">الغيابات</h3>
+              <p>عدد الغيابات للمدربين: {users.deputyDirector.coachAttendance.filter(a => a === "غائب").length}</p>
+              <p>عدد الغيابات للرياضيين: {users.deputyDirector.athleteAttendance.filter(a => a === "غائب").length}</p>
+            </div>
+          )}
+        </div>
+      );
+
+      const renderAttendance = () => {
+        if (user.role === "deputy" || user.role === "director") {
+          return (
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h3 className="text-xl font-bold mb-4">إدارة الحضور والغياب</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full table-auto">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-4 py-2">الاسم</th>
+                      <th className="px-4 py-2">الدور</th>
+                      <th className="px-4 py-2">الحالة</th>
+                      <th className="px-4 py-2">تحديث الحالة</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...users.athletes, ...users.coaches].map((person) => (
+                      <tr key={person.id}>
+                        <td className="border px-4 py-2">{person.name}</td>
+                        <td className="border px-4 py-2 capitalize">{person.role}</td>
+                        <td className="border px-4 py-2">{person.attendance}</td>
+                        <td className="border px-4 py-2">
+                          <select
+                            value={person.attendance}
+                            onChange={(e) => {
+                              const updatedPerson = { ...person, attendance: e.target.value };
+                              setUsers({
+                                ...users,
+                                [updatedPerson.role + "s"]: [
+                                  ...users[updatedPerson.role + "s"].filter(u => u.id !== person.id),
+                                  updatedPerson
+                                ]
+                              });
+                              sendSMS(`تم تحديث حضورك إلى ${e.target.value}`);
+                            }}
+                            className="p-1 border rounded"
+                          >
+                            <option value="حاضر">حاضر</option>
+                            <option value="غائب">غائب</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        } else {
+          return <p className="text-center text-gray-500">ليس لديك صلاحية لعرض هذه الصفحة</p>;
+        }
+      };
+
+      const renderPerformance = () => {
+        if (user.role === "director" || user.role === "coach") {
+          return (
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h3 className="text-xl font-bold mb-4">تقييم الأداء للمدربين</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full table-auto">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-4 py-2">اسم المدرب</th>
+                      <th className="px-4 py-2">التقييم</th>
+                      <th className="px-4 py-2">ملاحظات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.coaches.map((coach) => (
+                      <tr key={coach.id}>
+                        <td className="border px-4 py-2">{coach.name}</td>
+                        <td className="border px-4 py-2">
+                          <input
+                            type="number"
+                            min="0"
+                            max="5"
+                            value={coach.performanceRating}
+                            onChange={(e) => {
+                              const updatedCoach = { ...coach, performanceRating: parseInt(e.target.value) };
+                              setUsers({
+                                ...users,
+                                coaches: users.coaches.map(c => c.id === coach.id ? updatedCoach : c)
+                              });
+                            }}
+                            className="w-16 p-1 border rounded"
+                          />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <input
+                            type="text"
+                            value={coach.notes}
+                            onChange={(e) => {
+                              const updatedCoach = { ...coach, notes: e.target.value };
+                              setUsers({
+                                ...users,
+                                coaches: users.coaches.map(c => c.id === coach.id ? updatedCoach : c)
+                              });
+                            }}
+                            className="w-full p-1 border rounded"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        } else {
+          return <p className="text-center text-gray-500">ليس لديك صلاحية لعرض هذه الصفحة</p>;
+        }
+      };
+
+      const renderHealthEvaluations = () => {
+        if (user.role === "director" || user.role === "doctor") {
+          return (
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h3 className="text-xl font-bold mb-4">التقييمات الصحية</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full table-auto">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-4 py-2">الاسم</th>
+                      <th className="px-4 py-2">التاريخ</th>
+                      <th className="px-4 py-2">الملاحظات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.doctors.flatMap((doc) =>
+                      doc.evaluations.map((evalItem, idx) => (
+                        <tr key={`${doc.id}-${idx}`}>
+                          <td className="border px-4 py-2">{doc.name}</td>
+                          <td className="border px-4 py-2">{evalItem.date}</td>
+                          <td className="border px-4 py-2">{evalItem.notes}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        } else {
+          return <p className="text-center text-gray-500">ليس لديك صلاحية لعرض هذه الصفحة</p>;
+        }
+      };
+
+      const renderFinance = () => {
+        if (user.role === "director" || user.role === "finance") {
+          return (
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h3 className="text-xl font-bold mb-4">المالية</h3>
+              <div className="mb-4">
+                <label className="block mb-2">الاشتراكات الشهرية:</label>
+                <input
+                  type="number"
+                  value={users.financeManager.subscriptions}
+                  onChange={(e) => {
+                    setUsers({
+                      ...users,
+                      financeManager: {
+                        ...users.financeManager,
+                        subscriptions: parseInt(e.target.value)
+                      }
+                    });
+                  }}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block mb-2">التأمين:</label>
+                <input
+                  type="number"
+                  value={users.financeManager.insurance}
+                  onChange={(e) => {
+                    setUsers({
+                      ...users,
+                      financeManager: {
+                        ...users.financeManager,
+                        insurance: parseInt(e.target.value)
+                      }
+                    });
+                  }}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+            </div>
+          );
+        } else {
+          return <p className="text-center text-gray-500">ليس لديك صلاحية لعرض هذه الصفحة</p>;
+        }
+      };
+
+      const renderNotifications = () => (
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h3 className="text-xl font-bold mb-4">الإشعارات</h3>
+          {notifications.length > 0 ? (
+            <ul className="space-y-2">
+              {notifications.map((note, idx) => (
+                <li key={idx} className="p-3 bg-gray-50 rounded border-l-4 border-blue-500">
+                  <p>{note.message}</p>
+                  <small className="text-gray-500">{note.time}</small>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-500">لا توجد إشعارات جديدة</p>
+          )}
+        </div>
+      );
+
+      if (!user) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+            <div className="max-w-md w-full bg-white rounded-xl shadow-xl overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-700 py-8 px-6 text-center text-white">
+                <h1 className="text-3xl font-bold">نظام إدارة الرياضيين</h1>
+                <p className="mt-2 opacity-90">تسجيل الدخول</p>
+              </div>
+              <form onSubmit={handleLogin} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">رقم الهوية</label>
+                  <input
+                    type="text"
+                    required
+                    value={loginForm.username}
+                    onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="أدخل رقم هويتك"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200"
+                >
+                  دخول
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-100">
+          {/* Header */}
+          <header className="bg-white shadow-sm">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+              <h1 className="text-2xl font-bold text-gray-800">نظام إدارة الرياضيين</h1>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-600">مرحبًا، {user.name}</span>
+                <button
+                  onClick={() => setUser(null)}
+                  className="text-sm text-red-600 hover:text-red-800"
+                >
+                  خروج
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Navigation Tabs */}
+            <div className="flex space-x-4 space-x-reverse mb-8 border-b">
+              <button
+                onClick={() => setActiveTab("dashboard")}
+                className={`py-2 px-4 font-medium text-sm ${
+                  activeTab === "dashboard"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-600 hover:text-gray-800"
+                }`}
+              >
+                لوحة التحكم
+              </button>
+              <button
+                onClick={() => setActiveTab("attendance")}
+                className={`py-2 px-4 font-medium text-sm ${
+                  activeTab === "attendance"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-600 hover:text-gray-800"
+                }`}
+              >
+                الحضور والغياب
+              </button>
+              <button
+                onClick={() => setActiveTab("performance")}
+                className={`py-2 px-4 font-medium text-sm ${
+                  activeTab === "performance"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-600 hover:text-gray-800"
+                }`}
+              >
+                تقييم الأداء
+              </button>
+              <button
+                onClick={() => setActiveTab("health")}
+                className={`py-2 px-4 font-medium text-sm ${
+                  activeTab === "health"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-600 hover:text-gray-800"
+                }`}
+              >
+                التقييم الصحي
+              </button>
+              <button
+                onClick={() => setActiveTab("finance")}
+                className={`py-2 px-4 font-medium text-sm ${
+                  activeTab === "finance"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-600 hover:text-gray-800"
+                }`}
+              >
+                المالية
+              </button>
+              <button
+                onClick={() => setActiveTab("notifications")}
+                className={`py-2 px-4 font-medium text-sm ${
+                  activeTab === "notifications"
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-600 hover:text-gray-800"
+                }`}
+              >
+                الإشعارات
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            <div className="mt-6">
+              {activeTab === "dashboard" && renderDashboard()}
+              {activeTab === "attendance" && renderAttendance()}
+              {activeTab === "performance" && renderPerformance()}
+              {activeTab === "health" && renderHealthEvaluations()}
+              {activeTab === "finance" && renderFinance()}
+              {activeTab === "notifications" && renderNotifications()}
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
